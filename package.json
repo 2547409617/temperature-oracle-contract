@@ -22,5 +22,10 @@
   "bugs": {
     "url": "https://github.com/2547409617/temperature-oracle-contract/issues"
   },
-  "homepage": "https://github.com/2547409617/temperature-oracle-contract#readme"
+  "homepage": "https://github.com/2547409617/temperature-oracle-contract#readme",
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.6.0",
+    "@truffle/hdwallet-provider": "^2.0.8",
+    "truffle": "^5.5.15"
+  }
 }
