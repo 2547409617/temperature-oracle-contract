@@ -46,7 +46,9 @@ contract TemperatureOracle is AccessControl, TemperatureOracleInterface {
     
     minTemperature = floatstr2num(_minTemperatureStr);
     maxTemperature = floatstr2num(_maxTemperatureStr);
-    require (maxTemperature > minTemperature, "maxTemperature must greater minTemperature!");
+
+    string memory errMsg = string(bytes.concat(bytes("maxTemperature="), bytes(_maxTemperatureStr), bytes(" must greater minTemperature="), bytes(_minTemperatureStr)));
+    require (maxTemperature > minTemperature, errMsg);
     minOracleNumber = _minOracleNumber;
     _setupRole(OWNER_ROLE, _owner);
   }
@@ -112,37 +114,6 @@ contract TemperatureOracle is AccessControl, TemperatureOracleInterface {
       middleTemperature = temperatureArray[middle];
     }
     return middleTemperature;
-  }
-
-  function quickSort(int256[] memory arr, int left, int right) internal pure {
-    int i = left;
-    int j = right;
-    if (i == j) {
-      return;
-    }
-    
-    int256 pivot = arr[uint(left + (right - left) / 2)];
-    while (i <= j) {
-        while (arr[uint(i)] > pivot) {
-          i++;
-        }
-        while (pivot > arr[uint(j)]) {
-          j--;
-        }
-        if (i <= j) {
-            (arr[uint(i)], arr[uint(j)]) = (arr[uint(j)], arr[uint(i)]);
-            i++;
-            j--;
-        }
-    }
-
-    if (left < j) {
-      quickSort(arr, left, j);
-    }
-        
-    if (i < right) {
-      quickSort(arr, i, right);
-    }
   }
 
   function floatstr2num(string memory floatStr) public pure returns(int256) {
@@ -219,6 +190,37 @@ contract TemperatureOracle is AccessControl, TemperatureOracleInterface {
         bytesArray[i] = _bytes32[i];
     }
     return string(bytesArray);
+  }
+
+   function quickSort(int256[] memory arr, int left, int right) internal pure {
+    int i = left;
+    int j = right;
+    if (i == j) {
+      return;
+    }
+    
+    int256 pivot = arr[uint(left + (right - left) / 2)];
+    while (i <= j) {
+        while (arr[uint(i)] > pivot) {
+          i++;
+        }
+        while (pivot > arr[uint(j)]) {
+          j--;
+        }
+        if (i <= j) {
+            (arr[uint(i)], arr[uint(j)]) = (arr[uint(j)], arr[uint(i)]);
+            i++;
+            j--;
+        }
+    }
+
+    if (left < j) {
+      quickSort(arr, left, j);
+    }
+        
+    if (i < right) {
+      quickSort(arr, i, right);
+    }
   }
 
 }
