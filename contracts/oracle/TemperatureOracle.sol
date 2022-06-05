@@ -6,11 +6,12 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/math/SignedSafeMath.sol";
-import "@openzeppelin/contracts/utils/structs/EnumerableMap.sol";
+//import "@openzeppelin/contracts/utils/structs/EnumerableMap.sol";
 
 import "./util/strings.sol";
 import "./util/numbers.sol";
 import "./util/RoleBasedAcl.sol";
+import "./util/CustomEnumerableMap.sol";
 
 import "./TemperatureOracleInterface.sol";
 
@@ -37,9 +38,9 @@ contract TemperatureOracle is RoleBasedAcl , TemperatureOracleInterface {
   int256 private maxTemperature;
 
 
-  using EnumerableMap for EnumerableMap.AddressToUintMap;
+  using CustomEnumerableMap for CustomEnumerableMap.Bytes32ToInt256Map;
   // store oracle report temperature in cent int format
-  EnumerableMap.AddressToUintMap  private temperatureMap;
+  CustomEnumerableMap.Bytes32ToInt256Map  private temperatureMap;
 
   event DepolyContractEvent(address ownerAddress, uint8 minOracleNumber, string minTemperatureStr, string maxTemperatureStr);
 
@@ -98,12 +99,26 @@ contract TemperatureOracle is RoleBasedAcl , TemperatureOracleInterface {
   }
 
   /*
+   * No event should not emited if the same oracle set the same temperature;
    * @param _temperatureStr temperature in float string format.
    */
   function SetTemperature(string memory _temperatureStr) public hasRole(ORACLE_ROLE) {
     int256 temp = numbers.floatstr2IntCent(_temperatureStr, scaleOfTemperature);
     require(temp >= minTemperature && temp <= maxTemperature, "Input temperature is out of range!");
-    temperatureMap.set(msg.sender, uint256(temp));
+
+    (bool exist, int256 value) = temperatureMap.tryGet(msg.sender);
+    if (exist) {
+      if (value == temp) {
+        // no event emit
+        return;
+      }
+
+      temperatureMap.remove(msg.sender);
+      temperatureMap.set(msg.sender, temp);
+    } else {
+      temperatureMap.set(msg.sender, temp);
+    }
+    
     if (numOracles >= minOracleNumber && temperatureMap.length() >= minOracleNumber) {
       int256 middleTemperature = comupteTemperature();
 
@@ -133,8 +148,8 @@ contract TemperatureOracle is RoleBasedAcl , TemperatureOracleInterface {
     int256[] memory temperatureArray = new int256[](total);
 
     for(uint256 i=0; i<total; i++) {
-      (, uint256 value) = temperatureMap.at(i);
-      temperatureArray[i] = int256(value);
+      (, int256 value) = temperatureMap.at(i);
+      temperatureArray[i] = value;
     }
 
     numbers.quickSort(temperatureArray, 0, int(total-1));
