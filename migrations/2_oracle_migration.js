@@ -1,6 +1,6 @@
-const TemperatureOracle = artifacts.require("TemperatureOracle");
+const TemperatureOracle = artifacts.require("Oracle/TemperatureOracle");
 
 
 module.exports = function (deployer) {
-  deployer.deploy(TemperatureOracle, "0xe646DF84ed2d88933058AD01BD8280390ae08534", 3, "-100.00", "100.00");
+  deployer.deploy(TemperatureOracle, '0x4B76E22D805845052D48936Dd515f22FCf600E01', 3, "-100.00", "100.00");
 };

@@ -4,15 +4,16 @@ pragma solidity >=0.4.22 <0.9.0;
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import "@openzeppelin/contracts/utils/math/SignedSafeMath.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/math/SignedSafeMath.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableMap.sol";
 
 import "./util/strings.sol";
 
 import "./TemperatureOracleInterface.sol";
 
-contract TemperatureOracle is AccessControl, TemperatureOracleInterface {
+// contract TemperatureOracle is AccessControl, TemperatureOracleInterface {
+contract TemperatureOracle is  TemperatureOracleInterface {
   uint8 public constant defaultMinOracleNumber  = 3;
   int256 private constant scaleOfTemperature = 100;
 
@@ -23,19 +24,23 @@ contract TemperatureOracle is AccessControl, TemperatureOracleInterface {
   uint8 private numOracles = 0;
   uint8 private minOracleNumber = defaultMinOracleNumber;
   bool private ready = false;
-  int256 private temperature;
+  string private temperature;
   int256 private minTemperature;
   int256 private maxTemperature;
 
   using SafeCast for uint256;
-  using SignedSafeMath for int256;
+  using SafeCast for int256;
   using SafeMath for uint256;
+  using SignedSafeMath for int256;
+  
   using strings for *;
 
-  using EnumerableMap for EnumerableMap.Bytes32ToBytes32Map;
-  EnumerableMap.Bytes32ToBytes32Map private temperatureMap;
+  using EnumerableMap for EnumerableMap.AddressToUintMap ;
+  EnumerableMap.AddressToUintMap  private temperatureMap;
 
-  event AddOracleEvent(address oracleAddress);
+  event DepolyContractEvent(address ownerAddress, uint8 minOracleNumber, string minTemperatureStr, string maxTemperatureStr);
+
+  event AddOracleEvent(address oracleAddress, address ownerAddress);
   event RemoveOracleEvent(address oracleAddress);
 
   event GetTemperatureEvent(address callerAddress);
@@ -50,25 +55,30 @@ contract TemperatureOracle is AccessControl, TemperatureOracleInterface {
     string memory errMsg = string(bytes.concat(bytes("maxTemperature="), bytes(_maxTemperatureStr), bytes(" must greater minTemperature="), bytes(_minTemperatureStr)));
     require (maxTemperature > minTemperature, errMsg);
     minOracleNumber = _minOracleNumber;
-    _setupRole(OWNER_ROLE, _owner);
+    //_setupRole(OWNER_ROLE, _owner);
+
+    emit DepolyContractEvent(_owner, _minOracleNumber, _minTemperatureStr, _maxTemperatureStr);
   }
 
-  function addOracle (address _oracle) public onlyRole(OWNER_ROLE) {
-    require(!hasRole(ORACLE_ROLE, _oracle), "Already an oracle!");
-    grantRole(ORACLE_ROLE, _oracle);
+  // function addOracle (address _oracle) public onlyRole(OWNER_ROLE) {
+  function addOracle (address _oracle) public {
+    //require(!hasRole(ORACLE_ROLE, _oracle), "Already an oracle!");
+    emit AddOracleEvent(_oracle, msg.sender);
+    //grantRole(ORACLE_ROLE, _oracle);
     numOracles++;
-    emit AddOracleEvent(_oracle);
+  //  emit AddOracleEvent(_oracle);
   }
 
-  function removeOracle (address _oracle) public onlyRole(OWNER_ROLE) {
-    require(hasRole(ORACLE_ROLE, _oracle), "Not an oracle!");
+  // function removeOracle (address _oracle) public onlyRole(OWNER_ROLE) {
+  function removeOracle (address _oracle) public  {
+    //require(hasRole(ORACLE_ROLE, _oracle), "Not an oracle!");
     if (numOracles <= minOracleNumber) {
       revert("Oracle number will less than minOracleNumber!");
     }
     
-    revokeRole(ORACLE_ROLE, _oracle);
+    //revokeRole(ORACLE_ROLE, _oracle);
     numOracles--;
-    temperatureMap.remove(bytes32(uint256(uint160(_oracle))));
+    temperatureMap.remove(_oracle);
     emit RemoveOracleEvent(_oracle);
   }
 
@@ -77,39 +87,50 @@ contract TemperatureOracle is AccessControl, TemperatureOracleInterface {
       revert ("Oracle not ready!");
     }
     
-    string memory part1 = int2str(temperature / scaleOfTemperature);
-    string memory part2 = int2str(temperature % scaleOfTemperature);
-    string memory _temperatureStr = string(bytes.concat(bytes(part1), ".", bytes(part2)));
     emit GetTemperatureEvent(msg.sender);
-    return _temperatureStr;
+    return temperature;
   }
 
-  function SetTemperature(string memory _temperatureStr) public onlyRole(ORACLE_ROLE) {
-    int256 _temperature = floatstr2num(_temperatureStr);
-    require(_temperature >= minTemperature && _temperature <= maxTemperature, "Input temperature is out of range!");
-    temperatureMap.set(bytes32(uint256(uint160(msg.sender))), temperatureToBytes32(_temperature));
-    if (numOracles >= minOracleNumber) {
-      temperature = comupteTemperature();
+  // function SetTemperature(string memory _temperatureStr) public onlyRole(ORACLE_ROLE) {
+  function SetTemperature(string memory _temperatureStr) public  {
+    int256 temp = floatstr2num(_temperatureStr);
+    require(temp >= minTemperature && temp <= maxTemperature, "Input temperature is out of range!");
+    temperatureMap.set(msg.sender, uint256(temp));
+    if (numOracles >= minOracleNumber && temperatureMap.length() >= minOracleNumber) {
+      int256 middleTemperature = comupteTemperature();
+      string memory sign = "";
+      if (middleTemperature < 0) {
+        middleTemperature = middleTemperature.mul(-1);
+        sign = "-";
+      }
+      string memory part1 = int2str(middleTemperature / scaleOfTemperature);
+
+      int256 cents = middleTemperature % scaleOfTemperature;
+      string memory part2 = int2str(cents);
+      if (cents < 10) {
+        part2 = string(bytes.concat("0", bytes(part2)));
+      }
+      temperature = string(bytes.concat(bytes(sign), bytes(part1), ".", bytes(part2)));
       ready = true;
     }
     
     emit SetTemperatureEvent(_temperatureStr, msg.sender);
   }
 
-  function comupteTemperature() private returns (int256) {
+  function comupteTemperature() private view returns (int256) {
     uint256 total = temperatureMap.length();
     int256[] memory temperatureArray = new int256[](total);
+
     for(uint256 i=0; i<total; i++) {
-      (, bytes32 value) = temperatureMap.at(i);
-      string memory strValue = bytes32ToStr(value);
-      temperatureArray[i] = str2num(strValue);
+      (, uint256 value) = temperatureMap.at(i);
+      temperatureArray[i] = int256(value);
     }
 
     quickSort(temperatureArray, 0, int(total-1));
     uint256 middle = total / 2;
-    int256 middleTemperature;
+    int256 middleTemperature = 0;
     if (middle * 2 == total) {
-      middleTemperature = (temperatureArray[middle - 1] + temperatureArray[middle]) / 2;
+       middleTemperature = (temperatureArray[middle - 1] + temperatureArray[middle]) / 2;
     } else {
       middleTemperature = temperatureArray[middle];
     }
@@ -133,10 +154,12 @@ contract TemperatureOracle is AccessControl, TemperatureOracleInterface {
         string memory part = slice.split(delimeterSlice).toString();
         if (i == 0) {
           number = str2num(part);
-          number.mul(scaleOfTemperature);
-          require(slice.len() <= 1 + 2, "Input float must up to 2 decimal places!");
+          number = number.mul(scaleOfTemperature);
         } else {
-          number.add(str2num(part));
+          int256 temp = str2num(part);
+          string memory errMsg = string(bytes.concat(bytes("Input float must up to 2 decimal places, ["), bytes(Strings.toString(temp.toUint256())), bytes("]")));
+          require(temp < 100, errMsg);
+          number = number.add(temp);
         }
     }
     return number.mul(sign);
@@ -160,36 +183,7 @@ contract TemperatureOracle is AccessControl, TemperatureOracleInterface {
   }
 
   function int2str(int256 number) public pure returns(string memory) {
-    bool sign = number >= 0;
-    if (!sign) {
-      number.mul(-1);
-    }
-
-    string memory numString = Strings.toString(uint256(number));
-    if (!sign) {
-      numString = string(bytes.concat("-", bytes(numString)));
-    }
-    return numString;
-  }
-
-  function temperatureToBytes32(int256 _temperature) private pure returns (bytes32 result) {
-    string memory source = int2str(_temperature);
-    bytes memory tempEmptyStringTest = bytes(source);
-    if (tempEmptyStringTest.length == 0) {
-        return 0x0;
-    }
-
-    assembly {
-        result := mload(add(source, 32))
-    }
-  }
-
-  function bytes32ToStr(bytes32 _bytes32) public pure returns (string memory) {
-    bytes memory bytesArray = new bytes(32);
-    for (uint256 i; i < 32; i++) {
-        bytesArray[i] = _bytes32[i];
-    }
-    return string(bytesArray);
+    return Strings.toString(uint256(number));
   }
 
    function quickSort(int256[] memory arr, int left, int right) internal pure {

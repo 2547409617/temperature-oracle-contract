@@ -38,7 +38,7 @@
 
 // https://github.com/Arachnid/solidity-stringutils/blob/master/src/strings.sol
 
-pragma solidity ^0.8.0;
+pragma solidity >=0.4.22 <0.9.0;
 
 library strings {
     struct slice {

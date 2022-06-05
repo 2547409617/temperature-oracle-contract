@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.5.0 <=0.8.14;
+pragma solidity >=0.4.22 <0.9.0;
 
 interface TemperatureOracleInterface {
   function getTemperature() external returns (string memory);

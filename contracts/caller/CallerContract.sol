@@ -15,6 +15,7 @@ contract CallerContract is Ownable {
   }
 
   function queryTemperature() public returns (string memory) {
-    return oracleInstance.getTemperature();
+     oracleInstance.getTemperature();
+     return "abc";
   }
 }
