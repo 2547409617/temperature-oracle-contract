@@ -1,10 +1,22 @@
 const TemperatureOracle = artifacts.require("oracle/TemperatureOracle");
 
-contract("TemperatureOracle", (accounts) => {
-  it("SetTemperature data", async () => {
-    const temperatureOracle = await TemperatureOracle.deployed();
-    await temperatureOracle.addOracle(accounts[1], { from: accounts[0] });
+contract("Temperature", (accounts) => {
+  let temperatureOracle;
 
+   before("TemperatureOracle before", async () => {
+    temperatureOracle = await TemperatureOracle.deployed();
+    await temperatureOracle.addOracle(accounts[1], { from: accounts[0] });
+    await temperatureOracle.addOracle(accounts[2], { from: accounts[0] });
+    await temperatureOracle.addOracle(accounts[3], { from: accounts[0] });
+    });
+
+  it("SetTemperature data", async () => {
+    before("SetTemperature data before", async () => {
+    });
+
+    after("SetTemperature data after", async () => {
+    });
+   
     await temperatureOracle.SetTemperature("15.12", {from: accounts[1]});
 
     let hasExcption = false;
@@ -48,9 +60,6 @@ contract("TemperatureOracle", (accounts) => {
   });
 
   it("GetTemperature ready", async () => {
-    const temperatureOracle = await TemperatureOracle.deployed();
-    await temperatureOracle.addOracle(accounts[1], { from: accounts[0] });
-    
     await temperatureOracle.SetTemperature("15.12", {from: accounts[1]});
 
     let hasExcption = false;
@@ -69,11 +78,6 @@ contract("TemperatureOracle", (accounts) => {
   });
 
   it("SetTemperature positive data", async () => {
-    const temperatureOracle = await TemperatureOracle.deployed();
-    await temperatureOracle.addOracle(accounts[1], { from: accounts[0] });
-    await temperatureOracle.addOracle(accounts[2], { from: accounts[0] });
-    await temperatureOracle.addOracle(accounts[3], { from: accounts[0] });
-
     await temperatureOracle.SetTemperature("15.12", {from: accounts[1]});
     await temperatureOracle.SetTemperature("26.03", {from: accounts[2]});
     await temperatureOracle.SetTemperature("4.98", {from: accounts[3]});
@@ -87,12 +91,6 @@ contract("TemperatureOracle", (accounts) => {
   });
 
   it("SetTemperature nagetive data", async () => {
-    const temperatureOracle = await TemperatureOracle.deployed();
-    await temperatureOracle.addOracle(accounts[1], { from: accounts[0] });
-    await temperatureOracle.addOracle(accounts[2], { from: accounts[0] });
-    await temperatureOracle.addOracle(accounts[3], { from: accounts[0] });
-
-   
     await temperatureOracle.SetTemperature("-15.02", {from: accounts[1]});
     await temperatureOracle.SetTemperature("-26.03", {from: accounts[2]});
     await temperatureOracle.SetTemperature("-4.98", {from: accounts[3]});
@@ -107,11 +105,6 @@ contract("TemperatureOracle", (accounts) => {
   });
 
   it("SetTemperature positive and nagetive data", async () => {
-    const temperatureOracle = await TemperatureOracle.deployed();
-    await temperatureOracle.addOracle(accounts[1], { from: accounts[0] });
-    await temperatureOracle.addOracle(accounts[2], { from: accounts[0] });
-    await temperatureOracle.addOracle(accounts[3], { from: accounts[0] });
-
     await temperatureOracle.SetTemperature("15.12", {from: accounts[1]});
     await temperatureOracle.SetTemperature("-26.03", {from: accounts[2]});
     await temperatureOracle.SetTemperature("4.98", {from: accounts[3]});

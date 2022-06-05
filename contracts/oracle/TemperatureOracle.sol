@@ -9,16 +9,19 @@ import "@openzeppelin/contracts/utils/math/SignedSafeMath.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableMap.sol";
 
 import "./util/strings.sol";
+import "./util/RoleBasedAcl.sol";
 
 import "./TemperatureOracleInterface.sol";
 
-// contract TemperatureOracle is AccessControl, TemperatureOracleInterface {
-contract TemperatureOracle is  TemperatureOracleInterface {
+contract TemperatureOracle is RoleBasedAcl , TemperatureOracleInterface {
+//contract TemperatureOracle is  TemperatureOracleInterface {
   uint8 public constant defaultMinOracleNumber  = 3;
   int256 private constant scaleOfTemperature = 100;
 
-  bytes32 private constant OWNER_ROLE = keccak256("OWNER_ROLE");
-  bytes32 private constant ORACLE_ROLE = keccak256("ORACLE_ROLE");
+  //bytes32 private constant OWNER_ROLE = keccak256("OWNER_ROLE");
+  //bytes32 private constant ORACLE_ROLE = keccak256("ORACLE_ROLE");
+  string private constant OWNER_ROLE = "OWNER_ROLE";
+  string private constant ORACLE_ROLE = "ORACLE_ROLE";
 
   
   uint8 private numOracles = 0;
@@ -46,7 +49,7 @@ contract TemperatureOracle is  TemperatureOracleInterface {
   event GetTemperatureEvent(address callerAddress);
   event SetTemperatureEvent(string temperature, address callerAddress);
 
-  constructor (address _owner, uint8 _minOracleNumber, string memory _minTemperatureStr, string memory _maxTemperatureStr) {
+  constructor(address _owner, uint8 _minOracleNumber, string memory _minTemperatureStr, string memory _maxTemperatureStr) {
     require (_minOracleNumber >= defaultMinOracleNumber, "minOracleNumber must greater or equal defaultMinOracleNumber!");
     
     minTemperature = floatstr2num(_minTemperatureStr);
@@ -55,31 +58,33 @@ contract TemperatureOracle is  TemperatureOracleInterface {
     string memory errMsg = string(bytes.concat(bytes("maxTemperature="), bytes(_maxTemperatureStr), bytes(" must greater minTemperature="), bytes(_minTemperatureStr)));
     require (maxTemperature > minTemperature, errMsg);
     minOracleNumber = _minOracleNumber;
-    //_setupRole(OWNER_ROLE, _owner);
 
+    assignRole(OWNER_ROLE, msg.sender);
     emit DepolyContractEvent(_owner, _minOracleNumber, _minTemperatureStr, _maxTemperatureStr);
   }
 
-  // function addOracle (address _oracle) public onlyRole(OWNER_ROLE) {
-  function addOracle (address _oracle) public {
-    //require(!hasRole(ORACLE_ROLE, _oracle), "Already an oracle!");
-    emit AddOracleEvent(_oracle, msg.sender);
-    //grantRole(ORACLE_ROLE, _oracle);
+  function addOracle (address _oracle) public hasRole(OWNER_ROLE) {
+    require(!isAssignedRole(ORACLE_ROLE, _oracle), "Already an oracle!");
+    assignRole(ORACLE_ROLE, _oracle);
     numOracles++;
-  //  emit AddOracleEvent(_oracle);
+    emit AddOracleEvent(_oracle, msg.sender);
   }
 
-  // function removeOracle (address _oracle) public onlyRole(OWNER_ROLE) {
-  function removeOracle (address _oracle) public  {
-    //require(hasRole(ORACLE_ROLE, _oracle), "Not an oracle!");
+  function removeOracle(address _oracle) public hasRole(OWNER_ROLE) {
+    //require(owner == msg.sender, "Caller is not a OWNER_ROLE");
+    require(isAssignedRole(ORACLE_ROLE, _oracle), "Not an oracle!");
     if (numOracles <= minOracleNumber) {
       revert("Oracle number will less than minOracleNumber!");
     }
     
-    //revokeRole(ORACLE_ROLE, _oracle);
+    unassignRole(ORACLE_ROLE, _oracle);
     numOracles--;
     temperatureMap.remove(_oracle);
     emit RemoveOracleEvent(_oracle);
+  }
+
+  function getRoleValueStr() public pure returns (string memory) {
+    return toHex(keccak256("OWNER_ROLE"));
   }
 
   function getTemperature() public returns (string memory) {
@@ -91,8 +96,8 @@ contract TemperatureOracle is  TemperatureOracleInterface {
     return temperature;
   }
 
-  // function SetTemperature(string memory _temperatureStr) public onlyRole(ORACLE_ROLE) {
-  function SetTemperature(string memory _temperatureStr) public  {
+  function SetTemperature(string memory _temperatureStr) public hasRole(ORACLE_ROLE) {
+    //require(hasRole(ORACLE_ROLE, msg.sender), "Caller is not a ORACLE_ROLE");
     int256 temp = floatstr2num(_temperatureStr);
     require(temp >= minTemperature && temp <= maxTemperature, "Input temperature is out of range!");
     temperatureMap.set(msg.sender, uint256(temp));
@@ -107,10 +112,8 @@ contract TemperatureOracle is  TemperatureOracleInterface {
 
       int256 cents = middleTemperature % scaleOfTemperature;
       string memory part2 = int2str(cents);
-      if (cents < 10) {
-        part2 = string(bytes.concat("0", bytes(part2)));
-      }
-      temperature = string(bytes.concat(bytes(sign), bytes(part1), ".", bytes(part2)));
+      string memory centsPadding = cents >= 10 ? "" : "0";
+      temperature = string(bytes.concat(bytes(sign), bytes(part1), ".", bytes(centsPadding), bytes(part2)));
       ready = true;
     }
     
@@ -216,5 +219,26 @@ contract TemperatureOracle is  TemperatureOracleInterface {
       quickSort(arr, i, right);
     }
   }
+
+  function toHex16 (bytes16 data) internal pure returns (bytes32 result) {
+    result = bytes32 (data) & 0xFFFFFFFFFFFFFFFF000000000000000000000000000000000000000000000000 |
+          (bytes32 (data) & 0x0000000000000000FFFFFFFFFFFFFFFF00000000000000000000000000000000) >> 64;
+    result = result & 0xFFFFFFFF000000000000000000000000FFFFFFFF000000000000000000000000 |
+          (result & 0x00000000FFFFFFFF000000000000000000000000FFFFFFFF0000000000000000) >> 32;
+    result = result & 0xFFFF000000000000FFFF000000000000FFFF000000000000FFFF000000000000 |
+          (result & 0x0000FFFF000000000000FFFF000000000000FFFF000000000000FFFF00000000) >> 16;
+    result = result & 0xFF000000FF000000FF000000FF000000FF000000FF000000FF000000FF000000 |
+          (result & 0x00FF000000FF000000FF000000FF000000FF000000FF000000FF000000FF0000) >> 8;
+    result = (result & 0xF000F000F000F000F000F000F000F000F000F000F000F000F000F000F000F000) >> 4 |
+          (result & 0x0F000F000F000F000F000F000F000F000F000F000F000F000F000F000F000F00) >> 8;
+    result = bytes32 (0x3030303030303030303030303030303030303030303030303030303030303030 +
+           uint256 (result) +
+           (uint256 (result) + 0x0606060606060606060606060606060606060606060606060606060606060606 >> 4 &
+           0x0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F) * 7);
+}
+
+function toHex (bytes32 data) public pure returns (string memory) {
+    return string (abi.encodePacked ("0x", toHex16 (bytes16 (data)), toHex16 (bytes16 (data << 128))));
+}
 
 }
