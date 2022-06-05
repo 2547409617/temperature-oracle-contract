@@ -1,9 +1,74 @@
 const TemperatureOracle = artifacts.require("oracle/TemperatureOracle");
-const Caller = artifacts.require("caller/CallerContract");
-
 
 contract("TemperatureOracle", (accounts) => {
-  it("addOracle and SetTemperature positive data", async () => {
+  it("SetTemperature data", async () => {
+    const temperatureOracle = await TemperatureOracle.deployed();
+    await temperatureOracle.addOracle(accounts[1], { from: accounts[0] });
+
+    await temperatureOracle.SetTemperature("15.12", {from: accounts[1]});
+
+    let hasExcption = false;
+    try {
+      await temperatureOracle.SetTemperature("15.120", {from: accounts[1]});
+    } catch(error) {
+       hasExcption = true;
+    }
+
+    assert.equal(
+      hasExcption,
+      true,
+      "temperature with 3 decimal places should fail"
+    );
+
+    hasExcption = false;
+    try {
+      await temperatureOracle.SetTemperature("15.120.0", {from: accounts[1]});
+    } catch(error) {
+       hasExcption = true;
+    }
+
+    assert.equal(
+      hasExcption,
+      true,
+      "temperature not float should fail"
+    );
+
+    hasExcption = false;
+    try {
+      await temperatureOracle.SetTemperature("15-120", {from: accounts[1]});
+    } catch(error) {
+       hasExcption = true;
+    }
+
+    assert.equal(
+      hasExcption,
+      true,
+      "temperature not float should fail"
+    );
+  });
+
+  it("GetTemperature ready", async () => {
+    const temperatureOracle = await TemperatureOracle.deployed();
+    await temperatureOracle.addOracle(accounts[1], { from: accounts[0] });
+    
+    await temperatureOracle.SetTemperature("15.12", {from: accounts[1]});
+
+    let hasExcption = false;
+    try {
+      await temperatureOracle.getTemperature.call();
+    } catch(error) {
+       hasExcption = true;
+    }
+
+    assert.equal(
+      hasExcption,
+      true,
+      "oracle should be not ready"
+    );
+    
+  });
+
+  it("SetTemperature positive data", async () => {
     const temperatureOracle = await TemperatureOracle.deployed();
     await temperatureOracle.addOracle(accounts[1], { from: accounts[0] });
     await temperatureOracle.addOracle(accounts[2], { from: accounts[0] });
@@ -21,7 +86,7 @@ contract("TemperatureOracle", (accounts) => {
     );
   });
 
-  it("addOracle and SetTemperature nagetive data", async () => {
+  it("SetTemperature nagetive data", async () => {
     const temperatureOracle = await TemperatureOracle.deployed();
     await temperatureOracle.addOracle(accounts[1], { from: accounts[0] });
     await temperatureOracle.addOracle(accounts[2], { from: accounts[0] });
@@ -41,7 +106,7 @@ contract("TemperatureOracle", (accounts) => {
 
   });
 
-  it("addOracle and SetTemperature positive and nagetive data", async () => {
+  it("SetTemperature positive and nagetive data", async () => {
     const temperatureOracle = await TemperatureOracle.deployed();
     await temperatureOracle.addOracle(accounts[1], { from: accounts[0] });
     await temperatureOracle.addOracle(accounts[2], { from: accounts[0] });
