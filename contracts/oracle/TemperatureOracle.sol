@@ -3,8 +3,6 @@ pragma solidity >=0.4.22 <0.9.0;
 
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/math/SignedSafeMath.sol";
 
 
@@ -16,9 +14,6 @@ import "./util/CustomEnumerableMap.sol";
 import "./TemperatureOracleInterface.sol";
 
 contract TemperatureOracle is RoleBasedAcl , TemperatureOracleInterface {
-  using SafeCast for uint256;
-  using SafeCast for int256;
-  using SafeMath for uint256;
   using SignedSafeMath for int256;
 
   uint8 public constant defaultMinOracleNumber  = 3;
