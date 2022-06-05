@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/math/SignedSafeMath.sol";
-//import "@openzeppelin/contracts/utils/structs/EnumerableMap.sol";
+
 
 import "./util/strings.sol";
 import "./util/numbers.sol";
@@ -38,9 +38,9 @@ contract TemperatureOracle is RoleBasedAcl , TemperatureOracleInterface {
   int256 private maxTemperature;
 
 
-  using CustomEnumerableMap for CustomEnumerableMap.Bytes32ToInt256Map;
+  using CustomEnumerableMap for CustomEnumerableMap.AddressToInt256Map;
   // store oracle report temperature in cent int format
-  CustomEnumerableMap.Bytes32ToInt256Map  private temperatureMap;
+  CustomEnumerableMap.AddressToInt256Map  private temperatureMap;
 
   event DepolyContractEvent(address ownerAddress, uint8 minOracleNumber, string minTemperatureStr, string maxTemperatureStr);
 

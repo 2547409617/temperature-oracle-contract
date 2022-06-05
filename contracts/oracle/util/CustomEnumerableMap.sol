@@ -11,7 +11,7 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 library CustomEnumerableMap {
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    struct Bytes32ToInt256Map {
+    struct AddressToInt256Map {
         // Storage of keys
         EnumerableSet.AddressSet  _keys;
         mapping(address => int256) _values;
@@ -25,7 +25,7 @@ library CustomEnumerableMap {
      * already present.
      */
     function set(
-        Bytes32ToInt256Map storage map,
+        AddressToInt256Map storage map,
         address key,
         int256 value
     ) internal returns (bool) {
@@ -38,7 +38,7 @@ library CustomEnumerableMap {
      *
      * Returns true if the key was removed from the map, that is if it was present.
      */
-    function remove(Bytes32ToInt256Map storage map, address key) internal returns (bool) {
+    function remove(AddressToInt256Map storage map, address key) internal returns (bool) {
         delete map._values[key];
         return map._keys.remove(key);
     }
@@ -46,14 +46,14 @@ library CustomEnumerableMap {
     /**
      * @dev Returns true if the key is in the map. O(1).
      */
-    function contains(Bytes32ToInt256Map storage map, address  key) internal view returns (bool) {
+    function contains(AddressToInt256Map storage map, address  key) internal view returns (bool) {
         return map._keys.contains(key);
     }
 
     /**
      * @dev Returns the number of key-value pairs in the map. O(1).
      */
-    function length(Bytes32ToInt256Map storage map) internal view returns (uint256) {
+    function length(AddressToInt256Map storage map) internal view returns (uint256) {
         return map._keys.length();
     }
 
@@ -67,7 +67,7 @@ library CustomEnumerableMap {
      *
      * - `index` must be strictly less than {length}.
      */
-    function at(Bytes32ToInt256Map storage map, uint256 index) internal view returns (address, int256) {
+    function at(AddressToInt256Map storage map, uint256 index) internal view returns (address, int256) {
         address key = map._keys.at(index);
         return (key, map._values[key]);
     }
@@ -76,7 +76,7 @@ library CustomEnumerableMap {
      * @dev Tries to returns the value associated with `key`.  O(1).
      * Does not revert if `key` is not in the map.
      */
-    function tryGet(Bytes32ToInt256Map storage map, address key) internal view returns (bool, int256) {
+    function tryGet(AddressToInt256Map storage map, address key) internal view returns (bool, int256) {
         int256 value = map._values[key];
         if (value == 0) {
             return (contains(map, key), 0);
@@ -92,7 +92,7 @@ library CustomEnumerableMap {
      *
      * - `key` must be in the map.
      */
-    function get(Bytes32ToInt256Map storage map, address key) internal view returns (int256) {
+    function get(AddressToInt256Map storage map, address key) internal view returns (int256) {
         int256 value = map._values[key];
         require(value != 0 || contains(map, key), "EnumerableMap: nonexistent key");
         return value;
@@ -105,7 +105,7 @@ library CustomEnumerableMap {
      * message unnecessarily. For custom revert reasons use {_tryGet}.
      */
     function get(
-        Bytes32ToInt256Map storage map,
+        AddressToInt256Map storage map,
         address key,
         string memory errorMessage
     ) internal view returns (int256) {
