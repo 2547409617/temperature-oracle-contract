@@ -15,6 +15,11 @@ import "./util/RoleBasedAcl.sol";
 import "./TemperatureOracleInterface.sol";
 
 contract TemperatureOracle is RoleBasedAcl , TemperatureOracleInterface {
+  using SafeCast for uint256;
+  using SafeCast for int256;
+  using SafeMath for uint256;
+  using SignedSafeMath for int256;
+
   uint8 public constant defaultMinOracleNumber  = 3;
   int256 private constant scaleOfTemperature = 100;
 
@@ -23,20 +28,17 @@ contract TemperatureOracle is RoleBasedAcl , TemperatureOracleInterface {
   
   uint8 private numOracles = 0;
   uint8 private minOracleNumber = defaultMinOracleNumber;
-  bool private ready = false;
+  bool private oracleReady = false;
+  // store computed temperature result
   string private temperature;
+  // min temperature in cent format
   int256 private minTemperature;
+  // max temperature in cent format
   int256 private maxTemperature;
 
-  using SafeCast for uint256;
-  using SafeCast for int256;
-  using SafeMath for uint256;
-  using SignedSafeMath for int256;
 
-  //using Numbers for *;
-  
-  
-  using EnumerableMap for EnumerableMap.AddressToUintMap ;
+  using EnumerableMap for EnumerableMap.AddressToUintMap;
+  // store oracle report temperature in cent int format
   EnumerableMap.AddressToUintMap  private temperatureMap;
 
   event DepolyContractEvent(address ownerAddress, uint8 minOracleNumber, string minTemperatureStr, string maxTemperatureStr);
@@ -47,14 +49,16 @@ contract TemperatureOracle is RoleBasedAcl , TemperatureOracleInterface {
   event GetTemperatureEvent(address callerAddress);
   event SetTemperatureEvent(string temperature, address callerAddress);
 
+  /*
+   * @param _minTemperatureStr, _maxTemperatureStr in float format string.
+   */
   constructor(address _owner, uint8 _minOracleNumber, string memory _minTemperatureStr, string memory _maxTemperatureStr) {
     require (_minOracleNumber >= defaultMinOracleNumber, "minOracleNumber must greater or equal defaultMinOracleNumber!");
     
-    minTemperature = numbers.floatstr2num(_minTemperatureStr, scaleOfTemperature);
-    maxTemperature = numbers.floatstr2num(_maxTemperatureStr, scaleOfTemperature);
+    minTemperature = numbers.floatstr2IntCent(_minTemperatureStr, scaleOfTemperature);
+    maxTemperature = numbers.floatstr2IntCent(_maxTemperatureStr, scaleOfTemperature);
 
-    string memory errMsg = string(bytes.concat(bytes("maxTemperature="), bytes(_maxTemperatureStr), bytes(" must greater minTemperature="), bytes(_minTemperatureStr)));
-    require (maxTemperature > minTemperature, errMsg);
+    require (maxTemperature > minTemperature, "maxTemperature must greater minTemperature");
     minOracleNumber = _minOracleNumber;
 
     assignRole(OWNER_ROLE, msg.sender);
@@ -80,38 +84,50 @@ contract TemperatureOracle is RoleBasedAcl , TemperatureOracleInterface {
     emit RemoveOracleEvent(_oracle);
   }
 
+  /*
+   * oracle interface.
+   * @return temperature in float format string.
+   */
   function getTemperature() public returns (string memory) {
-    if (!ready) {
-      revert ("Oracle not ready!");
+    if (!oracleReady) {
+      revert ("Oracle not oracleReady!");
     }
     
     emit GetTemperatureEvent(msg.sender);
     return temperature;
   }
 
+  /*
+   * @param _temperatureStr temperature in float string format.
+   */
   function SetTemperature(string memory _temperatureStr) public hasRole(ORACLE_ROLE) {
-    int256 temp = numbers.floatstr2num(_temperatureStr, scaleOfTemperature);
+    int256 temp = numbers.floatstr2IntCent(_temperatureStr, scaleOfTemperature);
     require(temp >= minTemperature && temp <= maxTemperature, "Input temperature is out of range!");
     temperatureMap.set(msg.sender, uint256(temp));
     if (numOracles >= minOracleNumber && temperatureMap.length() >= minOracleNumber) {
       int256 middleTemperature = comupteTemperature();
+
+      // convert temperature in cent number format to float number in string
       string memory sign = "";
       if (middleTemperature < 0) {
         middleTemperature = middleTemperature.mul(-1);
         sign = "-";
       }
-      string memory part1 = numbers.int2str(middleTemperature / scaleOfTemperature);
+      string memory part1 = numbers.postiveInt2str(middleTemperature / scaleOfTemperature);
 
       int256 cents = middleTemperature % scaleOfTemperature;
-      string memory part2 = numbers.int2str(cents);
+      string memory part2 = numbers.postiveInt2str(cents);
       string memory centsPadding = cents >= 10 ? "" : "0";
       temperature = string(bytes.concat(bytes(sign), bytes(part1), ".", bytes(centsPadding), bytes(part2)));
-      ready = true;
+      oracleReady = true;
     }
     
     emit SetTemperatureEvent(_temperatureStr, msg.sender);
   }
 
+  /*
+   * find middle temperature to prevent bad data.
+   */
   function comupteTemperature() private view returns (int256) {
     uint256 total = temperatureMap.length();
     int256[] memory temperatureArray = new int256[](total);
