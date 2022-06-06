@@ -54,16 +54,15 @@ library numbers {
 // https://stackoverflow.com/questions/68976364/solidity-converting-number-strings-to-numbers
   function str2PostiveInt(string memory numString) public pure returns(int256) {
       uint256  val = 0;
+      uint256 ratio = 1;
       bytes   memory stringBytes = bytes(numString);
       for (uint256  i=0; i<stringBytes.length; i++) {
-          uint256 exp = stringBytes.length - i;
-          bytes1 b = stringBytes[i];
+          bytes1 b = stringBytes[stringBytes.length - 1 - i];
           require(b >= "0" && b <= "9", "Input not an float!");
           uint8 n = uint8(b) - uint8(0x30);
           uint256 number = uint256(n);
-          uint16 ratio = (10**(exp-1)).toUint16();
- 
           val +=  number.mul(ratio); 
+          ratio = ratio.mul(10);
       }
     return val.toInt256();
   }

@@ -151,7 +151,8 @@ contract TemperatureOracle is RoleBasedAcl , TemperatureOracleInterface {
     uint256 middle = total / 2;
     int256 middleTemperature = 0;
     if (middle * 2 == total) {
-       middleTemperature = (temperatureArray[middle - 1] + temperatureArray[middle]) / 2;
+      middleTemperature = temperatureArray[middle - 1].add(temperatureArray[middle]);
+      middleTemperature = middleTemperature.div(2);
     } else {
       middleTemperature = temperatureArray[middle];
     }
