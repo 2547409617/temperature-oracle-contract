@@ -39,10 +39,10 @@ library numbers {
     for(uint i = 0; i < count + 1; i++) {
         string memory part = slice.split(delimeterSlice).toString();
         if (i == 0) {
-          number = str2PostiveInt(part);
+          number = parseint(part);
           number = number.mul(scaleOfTemperature);
         } else {
-          int256 temp = str2PostiveInt(part);
+          int256 temp = parseint(part);
           string memory errMsg = string(bytes.concat(bytes("Input float must up to 2 decimal places, ["), bytes(Strings.toString(temp.toUint256())), bytes("]")));
           require(temp < 100, errMsg);
           number = number.add(temp);
@@ -52,19 +52,27 @@ library numbers {
   }
 
 // https://stackoverflow.com/questions/68976364/solidity-converting-number-strings-to-numbers
-  function str2PostiveInt(string memory numString) public pure returns(int256) {
-      uint256  val = 0;
+  function parseint(string memory numString) public pure returns(int256) {
+      uint256  value = 0;
       uint256 ratio = 1;
+      int256 sign = 1;
       bytes   memory stringBytes = bytes(numString);
       for (uint256  i=0; i<stringBytes.length; i++) {
           bytes1 b = stringBytes[stringBytes.length - 1 - i];
-          require(b >= "0" && b <= "9", "Input not an float!");
-          uint8 n = uint8(b) - uint8(0x30);
+          // check first byte is nagetive sign
+          if (i == 0 && b == 0x2D) {
+            sign = -1;
+            continue;
+          }
+
+          // check whether byte is digit
+          assert(b >= 0x30 && b <= 0x39);
+          uint8 n = uint8(b) - 0x30;
           uint256 number = uint256(n);
-          val +=  number.mul(ratio); 
+          value +=  number.mul(ratio); 
           ratio = ratio.mul(10);
       }
-    return val.toInt256();
+    return sign.mul(value.toInt256());
   }
 
   function postiveInt2str(int256 number) public pure returns(string memory) {
