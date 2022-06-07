@@ -60,7 +60,7 @@ library numbers {
       for (uint256  i=0; i<stringBytes.length; i++) {
           bytes1 b = stringBytes[stringBytes.length - 1 - i];
           // check first byte is nagetive sign
-          if (i == 0 && b == 0x2D) {
+          if (stringBytes.length - 1 == 0 && b == 0x2D) {
             sign = -1;
             continue;
           }
