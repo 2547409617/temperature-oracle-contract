@@ -76,7 +76,7 @@ library numbers {
   }
 
   function postiveInt2str(int256 number) public pure returns(string memory) {
-    return Strings.toString(uint256(number));
+    return Strings.toString(number.toUint256());
   }
 
  function quickSort(int256[] memory arr, int left, int right) internal pure {
